@@ -46,27 +46,44 @@ unirest.get(program.destination)
                     if (res_last.status === 200)
                     {
                         const {result} = res_last.body;
-                        if (result)
+
+                        const {revision} = result.log;
+                        svn.commands.log(program.address, {
+                            trustServerCert: true,
+                            revision: result ? `HEAD:${revision}` : `HEAD:1`,
+                            username: program.username,
+                            password: program.password
+                        }, (err, data) =>
                         {
-                            const {revision} = result.log;
-                            svn.commands.log(program.address, {
-                                trustServerCert: true,
-                                revision: `HEAD:${revision}`,
-                                username: program.username,
-                                password: program.password
-                            }, (err, data) =>
+                            if (!err)
                             {
-                                if (!err)
+                                if (!Array.isArray(data.logentry))
                                 {
-                                    if (!Array.isArray(data.logentry))
+                                    const doc = {
+                                        repo: program.address,
+                                        log: {
+                                            revision: Number(data.logentry.$.revision),
+                                            author: data.logentry.author,
+                                            date: new Date(data.logentry.date).getTime(),
+                                            message: data.logentry.msg
+                                        }
+                                    };
+
+                                    if (doc.log.revision > revision)
+                                    {
+                                        uploadToApi(doc);
+                                    }
+                                }
+                                else
+                                {
+                                    for (const entry of data.logentry)
                                     {
                                         const doc = {
                                             repo: program.address,
                                             log: {
-                                                revision: Number(data.logentry.$.revision),
-                                                author: data.logentry.author,
-                                                date: new Date(data.logentry.date).getTime(),
-                                                message: data.logentry.msg
+                                                revision: Number(entry.$.revision), author: entry.author,
+                                                date: new Date(entry.date).getTime(),
+                                                message: entry.msg
                                             }
                                         };
 
@@ -75,32 +92,9 @@ unirest.get(program.destination)
                                             uploadToApi(doc);
                                         }
                                     }
-                                    else
-                                    {
-                                        for (const entry of data.logentry)
-                                        {
-                                            const doc = {
-                                                repo: program.address,
-                                                log: {
-                                                    revision: Number(entry.$.revision), author: entry.author,
-                                                    date: new Date(entry.date).getTime(),
-                                                    message: entry.msg
-                                                }
-                                            };
-
-                                            if (doc.log.revision > revision)
-                                            {
-                                                uploadToApi(doc);
-                                            }
-                                        }
-                                    }
                                 }
-                            });
-                        }
-                        else
-                        {
-                            process.exit(1);
-                        }
+                            }
+                        });
                     }
                     else
                     {
