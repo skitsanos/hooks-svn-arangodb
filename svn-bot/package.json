@@ -10,7 +10,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "commander": "^9.4.0",
+    "commander": "^14.0.0",
     "node-svn-ultimate": "^1.2.1",
     "unirest": "^0.6.0"
   }
